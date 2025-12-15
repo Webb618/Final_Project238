@@ -1,0 +1,56 @@
+function [A,B] = A_and_B_pendubot(q1_ref)
+% Uses spongs equations to find the symbolic jacobians than plugs in the
+% appropraite values.
+syms q1 q2 dq1 dq2 u
+m1 = 1.0969;     % Mass of link 1 (kg)
+m2 = 0.8356;     % Mass of link 2 (kg)
+l1 = 0.1524;     % Length of link 1 (m)
+l2 = 0.2286;     % Length of link 2 (m)
+lc1 = 0.0754;    % Distance to center of mass of link 1 (m)
+lc2 = 0.0754;    % Distance toa center of mass of link 2 (m)
+I1 = 0.0056;   % Moment of inertia of link 1 (kg·m^2)
+I2 = 0.0059;   % Moment of inertia of link 2 (kg·m^2)
+g = 9.8; 
+
+d11 = m1*(lc1)^2 +m2*(l1^2+lc2^2+2*l1*lc2*cos(q2))+I1+I2;
+d12 = m2*(lc2^2+l1*lc2*cos(q2)) +I2;
+d21 = d12;
+d22 = m2*lc2^2+I2;
+
+    
+h1 = -m2*l1*lc2*sin(q2)*dq2^2 - 2*m2*l1*lc2*sin(q2)*dq2*dq1;
+h2 = m2*l1*lc2*sin(q2)*dq1^2;
+
+    
+phi1 = (m1*lc1+m2*l1)*g*cos(q1)+m2*lc2*g*cos(q1+q2);
+phi2 = m2*lc2*g*cos(q1+q2);
+
+
+
+ D = [d11 d12; d21 d22];
+    H = [h1; h2];
+    Phi = [phi1; phi2];
+
+    ddq = D \ ( [u; 0] - H - Phi );
+    ddq1 = ddq(1);
+    ddq2=ddq(2);
+
+
+f1 = dq1;
+f2 = dq2;
+f3 = ddq1;
+f4 = ddq2;
+f= [f1;f2;f3;f4];
+x= [q1;q2;dq1;dq2];
+
+A_sym = jacobian(f, x);   % ∂f/∂x
+B_sym = jacobian(f, u);   % ∂f/∂u
+
+THETA4 =m1*lc1 +m1*l2;
+
+x_equilibrium = [q1_ref;pi/2-q1_ref;0;0];
+u_equilirbirum = THETA4*g*cos(q1_ref);
+
+A = double(subs(A_sym, {q1, q2,dq1,dq2, u}, {x_equilibrium(1),x_equilibrium(2),0,0,u_equilirbirum}));
+B = double(subs(B_sym, {q1, q2,dq1,dq2, u}, {x_equilibrium(1),x_equilibrium(2),0,0,u_equilirbirum}));
+end
